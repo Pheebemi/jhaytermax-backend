@@ -20,8 +20,14 @@ class OrderViewSet(viewsets.ModelViewSet):
             return OrderCreateSerializer
         return OrderSerializer
 
-    def perform_create(self, serializer):
-        serializer.save()
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+        # Return the full order using OrderSerializer
+        output_serializer = OrderSerializer(order, context={'request': request})
+        headers = self.get_success_headers(output_serializer.data)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):

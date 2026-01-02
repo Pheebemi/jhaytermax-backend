@@ -22,8 +22,17 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['post'])
     def initiate(self, request):
+        # Log incoming data for debugging
+        import json
+        print(f"Payment initiate request data: {json.dumps(request.data)}")
+        print(f"Request data type: {type(request.data)}")
+        print(f"order_id in request.data: {'order_id' in request.data}")
+        if 'order_id' in request.data:
+            print(f"order_id value: {request.data.get('order_id')}, type: {type(request.data.get('order_id'))}")
+        
         serializer = PaymentInitiateSerializer(data=request.data, context={'request': request})
         if not serializer.is_valid():
+            print(f"Serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         from orders.models import Order
