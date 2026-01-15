@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     'payments',
 ]
 
+# Custom user model
+AUTH_USER_MODEL = 'accounts.User'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files
