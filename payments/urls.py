@@ -10,3 +10,4 @@ urlpatterns = [
     path('webhook/', flutterwave_webhook, name='flutterwave-webhook'),
 ]
 
+

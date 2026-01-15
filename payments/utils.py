@@ -87,54 +87,93 @@ def initiate_flutterwave_payment(order, customer_email, customer_name, customer_
 
 def verify_flutterwave_payment(tx_ref):
     """
-    Verify a Flutterwave payment status
+    Verify a Flutterwave payment status by tx_ref
     """
     from .models import Payment
+    from django.utils import timezone
     
     try:
         payment = Payment.objects.get(tx_ref=tx_ref)
     except Payment.DoesNotExist:
         raise Exception("Payment not found")
     
-    url = f"https://api.flutterwave.com/v3/transactions/{tx_ref}/verify"
+    # Flutterwave API: Query transactions by tx_ref
+    url = "https://api.flutterwave.com/v3/transactions"
     headers = {
         "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
         "Content-Type": "application/json",
     }
+    params = {
+        "tx_ref": tx_ref
+    }
     
     try:
-        response = requests.get(url, headers=headers, timeout=30)
+        # Get transaction by tx_ref
+        response = requests.get(url, headers=headers, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
         
+        print(f"Flutterwave response for tx_ref {tx_ref}: {data}")
+        
         if data.get('status') == 'success':
-            transaction_data = data['data']
+            transaction_list = data.get('data', [])
             
+            # If transaction data is empty, the transaction might not be available yet
+            # This can happen immediately after payment - Flutterwave needs a moment to process
+            if not transaction_list or len(transaction_list) == 0:
+                # Transaction not found yet - might still be processing
+                # Return the payment as-is (status will remain pending)
+                # The webhook will update it when Flutterwave processes it
+                raise Exception("Transaction not yet available in Flutterwave. Please wait a moment and refresh, or check your payment status later.")
+            
+            # Get the first transaction (should only be one for a tx_ref)
+            transaction_data = transaction_list[0] if isinstance(transaction_list, list) else transaction_list
+            
+            # Update payment with transaction data
             payment.flw_ref = transaction_data.get('flw_ref', '')
-            payment.transaction_id = transaction_data.get('id', '')
+            payment.transaction_id = str(transaction_data.get('id', ''))
             payment.webhook_data = transaction_data
             
-            if transaction_data.get('status') == 'successful':
+            # Check transaction status
+            transaction_status = transaction_data.get('status', '').lower()
+            
+            if transaction_status == 'successful':
                 payment.status = 'successful'
-                payment.paid_at = transaction_data.get('created_at')
+                if transaction_data.get('created_at'):
+                    try:
+                        from datetime import datetime
+                        date_str = transaction_data.get('created_at')
+                        # Handle different date formats
+                        if 'T' in date_str:
+                            payment.paid_at = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                        else:
+                            payment.paid_at = timezone.now()
+                    except Exception:
+                        payment.paid_at = timezone.now()
                 if transaction_data.get('payment_type'):
                     payment.payment_method = transaction_data.get('payment_type', '').lower()
-            else:
+            elif transaction_status in ['failed', 'cancelled']:
                 payment.status = 'failed'
-                payment.failure_reason = transaction_data.get('processor_response', 'Payment failed')
+                payment.failure_reason = transaction_data.get('processor_response', f'Payment {transaction_status}')
+            else:
+                # Still processing
+                payment.status = 'processing'
             
             payment.save()
             return payment
         else:
+            error_msg = data.get('message', 'Transaction not found')
             payment.status = 'failed'
-            payment.failure_reason = data.get('message', 'Verification failed')
+            payment.failure_reason = error_msg
             payment.save()
-            raise Exception(data.get('message', 'Verification failed'))
+            raise Exception(error_msg)
     except requests.RequestException as e:
+        error_msg = str(e)
         payment.status = 'failed'
-        payment.failure_reason = str(e)
+        payment.failure_reason = error_msg
         payment.save()
-        raise Exception(f"Failed to verify payment: {str(e)}")
+        print(f"Request error: {error_msg}")
+        raise Exception(f"Failed to verify payment: {error_msg}")
 
 
 def verify_webhook_signature(secret_hash, payload, signature):

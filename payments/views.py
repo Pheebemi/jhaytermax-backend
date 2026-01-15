@@ -71,7 +71,15 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
             serializer = self.get_serializer(payment)
             return Response(serializer.data)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            error_msg = str(e)
+            # If transaction not available yet, return 202 (Accepted) instead of 400
+            if "not yet available" in error_msg.lower():
+                return Response({
+                    'error': error_msg,
+                    'status': 'pending',
+                    'message': 'Transaction is being processed. Please check again in a moment.'
+                }, status=status.HTTP_202_ACCEPTED)
+            return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @csrf_exempt
@@ -98,7 +106,7 @@ def flutterwave_webhook(request):
             tx_ref = data.get('tx_ref')
             if tx_ref:
                 try:
-                    payment = Payment.objects.get(tx_ref=tx_ref)
+                    payment = Payment.objects.select_related('order').get(tx_ref=tx_ref)
                     payment.webhook_data = payload
                     
                     if data.get('status') == 'successful':
@@ -109,11 +117,16 @@ def flutterwave_webhook(request):
                             payment.paid_at = data.get('created_at')
                         if data.get('payment_type'):
                             payment.payment_method = data.get('payment_type', '').lower()
+                        payment.save()
+                        
+                        # Update order status to confirmed when payment is successful
+                        if payment.order and payment.order.status == 'pending':
+                            payment.order.status = 'confirmed'
+                            payment.order.save()
                     else:
                         payment.status = 'failed'
                         payment.failure_reason = data.get('processor_response', 'Payment failed')
-                    
-                    payment.save()
+                        payment.save()
                 except Payment.DoesNotExist:
                     pass  # Payment not found, ignore
         
