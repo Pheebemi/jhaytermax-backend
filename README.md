@@ -26,10 +26,11 @@ Django REST API backend for the Jhaytermax e-commerce platform.
 ```
 jhaytermax-backend/
 ├── config/                 # Django settings
-│   ├── settings.py        # Development settings
-│   ├── settings_prod.py   # Production settings
+│   ├── settings.py        # Main settings file (configured for production)
+│   ├── settings_prod.py   # Production settings template
 │   ├── urls.py           # Main URL configuration
 │   └── wsgi.py           # WSGI application
+├── wsgi_config.py        # PythonAnywhere WSGI configuration
 ├── accounts/              # User authentication app
 ├── products/              # Product management app
 ├── orders/                # Order management app

@@ -8,6 +8,7 @@ from .serializers import OrderSerializer, OrderCreateSerializer, StateSerializer
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         user = self.request.user
@@ -48,12 +49,14 @@ class StateViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = State.objects.filter(is_active=True)
     serializer_class = StateSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 class LocationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Location.objects.filter(is_active=True).select_related('state')
     serializer_class = LocationSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         queryset = super().get_queryset()

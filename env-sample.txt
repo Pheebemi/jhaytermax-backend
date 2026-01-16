@@ -1,6 +1,6 @@
 # Django Configuration
 SECRET_KEY=your-super-secret-key-here-change-this
-DJANGO_SETTINGS_MODULE=config.settings_prod
+DJANGO_SETTINGS_MODULE=config.settings
 DEBUG=False
 
 # Database Configuration (SQLite for PythonAnywhere)
@@ -16,7 +16,7 @@ FLUTTERWAVE_CURRENCY=NGN
 FLUTTERWAVE_REDIRECT_URL=https://yourfrontenddomain.com/payment/callback
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS=https://yourfrontenddomain.com,https://jhay.pythonanywhere.com
+CORS_ALLOWED_ORIGINS=https://jhaytermax.vercel.app,https://jhay.pythonanywhere.com
 
 # Email Configuration (Optional - for future features)
 # EMAIL_HOST=smtp.gmail.com

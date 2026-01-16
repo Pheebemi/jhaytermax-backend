@@ -148,7 +148,7 @@ SIMPLE_JWT = {
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Development frontend
-    "https://yourfrontenddomain.com",  # Replace with your production frontend URL
+    "https://jhaytermax.vercel.app",  # Production frontend URL
 ]
 
 CORS_ALLOW_CREDENTIALS = True

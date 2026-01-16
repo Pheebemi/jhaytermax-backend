@@ -13,6 +13,7 @@ from .utils import initiate_flutterwave_payment, verify_flutterwave_payment, ver
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         user = self.request.user
